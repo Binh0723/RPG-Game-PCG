@@ -1,0 +1,535 @@
+[gd_scene load_steps=61 format=2]
+
+[ext_resource path="res://Enitities/Monsters/Immortal-Spider/spider05.png" type="Texture" id=1]
+
+[sub_resource type="GDScript" id=1]
+script/source = "extends KinematicBody2D
+
+var player
+signal death
+# Random number generator
+var rng = RandomNumberGenerator.new()
+
+# Movement variables
+var speed = 175
+var direction : Vector2
+var last_direction = Vector2(0, 1)
+var bounce_countdown = 0
+var other_animation_playing = false
+# Skeleton stats
+var health = 150
+var health_max = 150
+var health_regeneration = 3
+
+var attack_damage = 20
+var attack_cooldown_time = 1500
+var next_attack_time = 0
+
+func _ready():
+	player = get_tree().root.get_node(\"Main/Player\")
+	rng.randomize()
+
+
+func _on_Timer_timeout():
+	# Calculate the position of the player relative to the skeleton
+	var player_relative_position = player.position - position
+	
+	if player_relative_position.length() <= 16:
+		# If player is near, don't move but turn toward it
+		direction = Vector2.ZERO
+		last_direction = player_relative_position.normalized()
+	elif player_relative_position.length() <= 100 and bounce_countdown == 0:
+		# If player is within range, move toward it
+		direction = player_relative_position.normalized()
+	elif bounce_countdown == 0:
+		# If player is too far, randomly decide whether to stand still or where to move
+		var random_number = rng.randf()
+		if random_number < 0.05:
+			direction = Vector2.ZERO
+		elif random_number < 0.1:
+			direction = Vector2.DOWN.rotated(rng.randf() * 2 * PI)
+	
+	# Update bounce countdown
+	if bounce_countdown > 0:
+		bounce_countdown = bounce_countdown - 1
+		
+func _physics_process(delta):
+	var movement = direction * speed * delta
+	
+	var collision = move_and_collide(movement)
+	
+	if collision != null and collision.collider.name != \"Player\":
+		direction = direction.rotated(rng.randf_range(PI/4, PI/2))
+		bounce_countdown = rng.randi_range(2, 5)
+	if not other_animation_playing:
+		animates_monster(direction)
+		
+	if direction != Vector2.ZERO:
+		$RayCast2D.cast_to = direction.normalized() * 20
+		
+func get_animation_direction(direction: Vector2):
+	var norm_direction = direction.normalized()
+	if norm_direction.y >= 0.707:
+		return \"down\"
+	elif norm_direction.y <= -0.707:
+		return \"up\"
+	elif norm_direction.x <= -0.707:
+		return \"left\"
+	elif norm_direction.x >= 0.707:
+		return \"right\"
+	return \"down\"
+
+func animates_monster(direction: Vector2):
+	if direction != Vector2.ZERO:
+		last_direction = direction
+		
+		# Choose walk animation based on movement direction
+		var animation = get_animation_direction(last_direction) + \"_walk\"
+		
+		# Play the walk animation
+		$AnimatedSprite.play(animation)
+	else:
+		# Choose idle animation based on last movement direction and play it
+		var animation = get_animation_direction(last_direction) + \"_idle\"
+		$AnimatedSprite.play(animation)
+		
+func arise():
+	other_animation_playing = true
+	$AnimatedSprite.play(\"birth\")
+
+
+func _on_AnimatedSprite_animation_finished():
+	if $AnimatedSprite.animation == \"birth\":
+		$AnimatedSprite.animation = \"down_idle\"
+		$Timer.start()
+	elif $AnimatedSprite.animation == \"death\":
+		get_tree().queue_delete(self)
+	other_animation_playing = false
+	
+func _process(delta):
+	# Regenerates health
+	health = min(health + health_regeneration * delta, health_max)
+	var now = OS.get_ticks_msec()
+	if now >= next_attack_time:
+		# What's the target?
+		var target = $RayCast2D.get_collider()
+		if target != null and target.name == \"Player\" and player.health > 0:
+			# Play attack animation
+			other_animation_playing = true
+
+			var animation = get_animation_direction(last_direction) + \"_bite\"
+			$AnimatedSprite.play(animation)
+			# Add cooldown time to current time
+			next_attack_time = now + attack_cooldown_time
+
+func hit(damage):
+	health -= damage
+	if health > 0:
+		$AnimationPlayer.play(\"Hit\")
+	else:
+		$Timer.stop()
+		direction = Vector2.ZERO
+		set_process(false)
+		other_animation_playing = true
+		$AnimatedSprite.play(\"death\")
+		emit_signal(\"death\")
+
+func _on_AnimatedSprite_frame_changed():
+	if $AnimatedSprite.animation.ends_with(\"_bite\") and $AnimatedSprite.frame == 1:
+		var target = $RayCast2D.get_collider()
+		if target != null and target.name == \"Player\" and player.health > 0:
+			player.hit(attack_damage)
+"
+
+[sub_resource type="AtlasTexture" id=2]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 256, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=3]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 320, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=4]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 384, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=5]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 448, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=6]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 512, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=7]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 576, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=8]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 256, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=9]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 320, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=10]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 384, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=11]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 448, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=12]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 512, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=13]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 576, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=14]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=15]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=16]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 128, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=17]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 192, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=18]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=19]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=20]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=21]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=22]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 256, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=23]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 320, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=24]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 384, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=25]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 448, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=26]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 512, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=27]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 576, 128, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=28]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=29]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=30]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 128, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=31]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=32]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=33]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=34]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=35]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 128, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=36]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 192, 256, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=37]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=38]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=39]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=40]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=41]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 128, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=42]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 192, 192, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=43]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=44]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=45]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 128, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=46]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 192, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=47]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 256, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=48]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 320, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=49]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 384, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=50]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 448, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=51]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 512, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=52]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 576, 64, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=53]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 0, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=54]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 64, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=55]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 128, 0, 64, 64 )
+
+[sub_resource type="AtlasTexture" id=56]
+flags = 4
+atlas = ExtResource( 1 )
+region = Rect2( 192, 0, 64, 64 )
+
+[sub_resource type="SpriteFrames" id=57]
+animations = [ {
+"frames": [ SubResource( 2 ), SubResource( 3 ), SubResource( 4 ), SubResource( 5 ), SubResource( 6 ), SubResource( 7 ) ],
+"loop": true,
+"name": "up_walk",
+"speed": 7.0
+}, {
+"frames": [ SubResource( 8 ), SubResource( 9 ), SubResource( 10 ), SubResource( 11 ), SubResource( 12 ), SubResource( 13 ) ],
+"loop": true,
+"name": "right_walk",
+"speed": 7.0
+}, {
+"frames": [ SubResource( 14 ), SubResource( 15 ), SubResource( 16 ), SubResource( 17 ) ],
+"loop": false,
+"name": "donw_bite",
+"speed": 5.0
+}, {
+"frames": [ SubResource( 18 ), SubResource( 19 ) ],
+"loop": true,
+"name": "right_idle",
+"speed": 1.0
+}, {
+"frames": [ SubResource( 20 ), SubResource( 21 ) ],
+"loop": true,
+"name": "down_idle",
+"speed": 1.0
+}, {
+"frames": [ SubResource( 22 ), SubResource( 23 ), SubResource( 24 ), SubResource( 25 ), SubResource( 26 ), SubResource( 27 ) ],
+"loop": true,
+"name": "down_walk",
+"speed": 7.0
+}, {
+"frames": [ SubResource( 28 ), SubResource( 29 ), SubResource( 30 ) ],
+"loop": false,
+"name": "birth",
+"speed": 5.0
+}, {
+"frames": [ SubResource( 31 ), SubResource( 32 ) ],
+"loop": false,
+"name": "up_idle",
+"speed": 1.0
+}, {
+"frames": [ SubResource( 33 ), SubResource( 34 ), SubResource( 35 ), SubResource( 36 ) ],
+"loop": false,
+"name": "death",
+"speed": 5.0
+}, {
+"frames": [ SubResource( 37 ), SubResource( 38 ) ],
+"loop": true,
+"name": "left_idle",
+"speed": 1.0
+}, {
+"frames": [ SubResource( 39 ), SubResource( 40 ), SubResource( 41 ), SubResource( 42 ) ],
+"loop": false,
+"name": "right_bite",
+"speed": 5.0
+}, {
+"frames": [ SubResource( 43 ), SubResource( 44 ), SubResource( 45 ), SubResource( 46 ) ],
+"loop": false,
+"name": "left_bite",
+"speed": 5.0
+}, {
+"frames": [ SubResource( 47 ), SubResource( 48 ), SubResource( 49 ), SubResource( 50 ), SubResource( 51 ), SubResource( 52 ) ],
+"loop": true,
+"name": "left_walk",
+"speed": 7.0
+}, {
+"frames": [ SubResource( 53 ), SubResource( 54 ), SubResource( 55 ), SubResource( 56 ) ],
+"loop": false,
+"name": "up_bite",
+"speed": 5.0
+} ]
+
+[sub_resource type="CircleShape2D" id=58]
+radius = 12.3336
+
+[sub_resource type="Animation" id=59]
+resource_name = "Hit"
+length = 0.2
+tracks/0/type = "value"
+tracks/0/path = NodePath("AnimatedSprite:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.2 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ Color( 1, 0, 0, 1 ), Color( 1, 1, 1, 1 ) ]
+}
+
+[node name="Immortal_Spider" type="KinematicBody2D"]
+z_index = 1
+script = SubResource( 1 )
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 0.25
+
+[node name="AnimatedSprite" type="AnimatedSprite" parent="."]
+modulate = Color( 1, 0, 0, 1 )
+frames = SubResource( 57 )
+animation = "down_idle"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource( 58 )
+
+[node name="RayCast2D" type="RayCast2D" parent="."]
+enabled = true
+cast_to = Vector2( 0, 20 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/Hit = SubResource( 59 )
+[connection signal="timeout" from="Timer" to="." method="_on_Timer_timeout"]
+[connection signal="animation_finished" from="AnimatedSprite" to="." method="_on_AnimatedSprite_animation_finished"]
+[connection signal="frame_changed" from="AnimatedSprite" to="." method="_on_AnimatedSprite_frame_changed"]
+[connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
