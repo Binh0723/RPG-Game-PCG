@@ -1,5 +1,5 @@
 extends Node
-
+var Stone = preload("res://Inventory/Stone/GreenStone.tscn")
 func _ready():
 	var rooms = $Dungeon.rooms
 	var minX = 10000
@@ -19,3 +19,6 @@ func _ready():
 				$Player.position.y = (y + 1)* 32
 				break
 	
+
+
+

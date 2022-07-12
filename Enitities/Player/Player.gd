@@ -37,6 +37,12 @@ var blue_stone_amount = 0
 var green_stone_amount = 0
 var black_stone_amount = 0
 
+enum KEYS {Key = 100}
+var key_amount = 0
+
+enum TREASURE {GOLD}
+var gold_amount = 0
+
 var shoot_scene = preload("res://Enitities/Bullet/Bullet.tscn")
 
 func _ready():
@@ -131,7 +137,8 @@ func _input(event):
 				if target.name.find("Immortal_Spider") || \
 				target.name.find("Speed_Spider") || \
 				target.name.find("Red_Spider") || \
-				target.name.find("Poison_Spider"):
+				target.name.find("Poison_Spider") || \
+				target.name.find("Goblin"):
 					target.hit(sword_damage)
 			attack_playing = true
 			
@@ -184,7 +191,8 @@ func hit(damage):
 	else:
 		$AnimationPlayer.play("Hit")
 
-func add_potion(type):
+func add(type):
+	
 	if type == Potion.HEALTH:
 		health_potions = health_potions + 1
 	elif type == Potion.MANA:
@@ -192,11 +200,15 @@ func add_potion(type):
 	elif type == STONE.BlackStone:
 		black_stone_amount = black_stone_amount + 1
 	elif type == STONE.RedStone:
-		black_stone_amount = black_stone_amount + 1
+		red_stone_amount = red_stone_amount + 1
 	elif type == STONE.BlueStone:
-		black_stone_amount = black_stone_amount + 1
+		blue_stone_amount = blue_stone_amount + 1
 	elif type == STONE.GreenStone:
-		black_stone_amount = black_stone_amount + 1
+		green_stone_amount = green_stone_amount + 1
+	elif type == KEYS.Key:
+		key_amount = key_amount + 1
+	elif type == TREASURE.GOLD:
+		gold_amount = gold_amount + 50
 	emit_signal("player_stats_changed", self)
 	
 	

@@ -3,6 +3,8 @@
 [ext_resource path="res://Inventory/Potions/Mana.gd" type="Script" id=1]
 [ext_resource path="res://Inventory/Potions/itemspotiona.png" type="Texture" id=2]
 
+
+
 [sub_resource type="RectangleShape2D" id=1]
 extents = Vector2( 10, 12.6244 )
 
